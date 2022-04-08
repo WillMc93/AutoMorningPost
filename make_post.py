@@ -11,21 +11,61 @@ SEVENTEEN_SCHEDULE = './017_schedule.csv'
 
 
 # Gather all tickets for the post.
-def get_tickets() -> list:
-	# Define the search request DTO/JSON
+# TODO: Try and make the request query readable
+def get_tickets() -> pd.DataFrame:
+	# Ugh, what a pain in the . . . 
+	# They made this as obtuse as possible. Like is there a good reason to do it this way?
+	# Why all of this spaghetti? This isn't even maximum possible spaghetti when searching.
 	request = {
-		'Status': 'Open',
-		'Deleted': 'false',
+		'QuerySetDefinitions': [
+			{ 
+				'QuerySetIndex': 0, 'QuerySetOperator': 'AND', 'QuerySetExpressions': [
+					{
+						'QueryExpressionOperator': 'AND',
+						'QueryExpressionOperation': 'Equal',
+						'FieldName': 'Status',
+						'FieldFilterValue1': 'Open',
+						'FieldFilterValue2': ''
+					}
+				]
+			}
+		],
+		'PageIndex': 0,
+		'PageSize': 100,
+		'CanIncludeNotes': False,
 	}
 
 	# Initialize API connection
-	api = IssuetrakAPI()
+	api = IssuetrakAPI.IssuetrakAPI()
 
-	# Perform search
-	response = api.perfromPost('/issues/search/', '', json.dumps(request))
+	tickets = []
+	gathered_all = False
+	total = 0
+	while not gathered_all:
+		# POST search request
+		response = api.performPost('/issues/search/', '', json.dumps(request))
 
-	pass
+		# Convert json to python dictionary
+		data = response.read()
+		data = json.loads(data)
 
+		# Get ticket data
+		tickets += data['Collection']
+
+		# Check loop status
+		page_count = data['CountForPage'] # number of tickets on this 'page'
+		expected_total = data['TotalCount'] # maximum number of open tickets
+		total += page_count
+		if total <  expected_total:
+			request['PageIndex'] += 1
+		else:
+			gathered_all = True
+
+	tickets = pd.DataFrame(tickets)
+	print(tickets)
+
+	return tickets
+	
 
 # Get the categories w/ custom strings.
 def get_categories(path:str=CATEGORIES_PATH) -> dict:
@@ -38,9 +78,23 @@ def get_schedule(path:str=SEVENTEEN_SCHEDULE) -> dict:
 
 	pass
 
+# Trim to neccessary columns and then picks out tickets for morning post
+def process_tickets(tickets:pd.DataFrame) -> pd.DataFrame:
+
+	#print(tickets.columns)
+
+	# Filter down to needed columns
+	columns = ['IssueNumber', 'SubmittedDate', 'Subject', 'IssueTypeID',
+			   'AssignedTo', 'SubStatusID', 'RequiredByDate']
+	tickets = tickets[tickets.columns.intersection(columns)]
+
+	# Filter down to relevant rows
+
+	return tickets
+
 
 # Sort the tickets into the proper categories.
-def sort_tickets(tickets:list, categories:dict) -> dict:
+def sort_tickets(tickets:dict, categories:dict) -> dict:
 
 	pass
 
@@ -57,7 +111,9 @@ def main():
 	categories = get_categories()
 	schedule = get_schedule()
 
-	# Sort tickets into categories
+	# Process and sort tickets
+	tickies = process_tickets(tickies)
+	print(tickies.head())
 	tickie_dict = sort_tickets(tickies, categories)
 
 	# Generate the post
@@ -66,3 +122,6 @@ def main():
 	# Print the post for copying
 	print(post)
 
+
+if __name__ == '__main__':
+	main()
