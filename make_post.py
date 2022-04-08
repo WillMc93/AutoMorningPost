@@ -5,7 +5,7 @@ import pandas as pd
 
 from IssuetrakAPI import IssuetrakAPI
 
-
+# Initialize Globals
 CATEGORIES_PATH = './categories.idk'
 SEVENTEEN_SCHEDULE = './017_schedule.csv'
 
@@ -62,9 +62,8 @@ def get_tickets() -> pd.DataFrame:
 		else:
 			gathered_all = True
 
+	# Convert tickets to DataFrame and return
 	tickets = pd.DataFrame(tickets)
-	print(tickets)
-
 	return tickets
 	
 
@@ -79,18 +78,67 @@ def get_schedule(path:str=SEVENTEEN_SCHEDULE) -> dict:
 
 	pass
 
-# Trim to neccessary columns and then picks out tickets for morning post
+# Get a dictionary of substatus ids
+def get_substatuses() -> dict:
+	# Initialize API connection
+	api = IssuetrakAPI.IssuetrakAPI()
+
+	# GET data to dictionary
+	response = api.performGet('/substatuses')
+	data = response.read()
+	data = json.loads(data)
+
+	# Get IDs and their labels into a dictionary
+	total = data['TotalCount']
+	substatuses = data['Collection']
+	substatuses = {id_['SubStatusID']: id_['SubStatusName'] for id_ in substatuses}
+	assert(total == len(substatuses))
+
+	return substatuses
+
+
+# Get a dictionary of IssueTypeIDs
+def get_issuetypes() -> dict:
+	# Initialize API connection
+	api = IssuetrakAPI.IssuetrakAPI()
+
+	# GET data to dictionary
+	response = api.performGet('/issuetypes')
+	data = response.read()
+	data = json.loads(data)
+
+	# Get IDs and their labels into a dictionary
+	total = data['TotalCount']
+	issuetypes = data['Collection']
+	issuetypes = {id_['IssueTypeID']: id_['IssueTypeName'] for id_ in issuetypes}
+	assert(total == len(issuetypes))
+
+	return issuetypes
+
+
+# Trim to neccessary columns, apply labels, and then get tickets for morning post
 def process_tickets(tickets:pd.DataFrame) -> pd.DataFrame:
-
-	#print(tickets.columns)
-
 	# Filter down to needed columns
 	columns = ['IssueNumber', 'SubmittedDate', 'Subject', 'IssueTypeID',
 			   'AssignedTo', 'SubStatusID', 'RequiredByDate']
-	tickets = tickets[tickets.columns.intersection(columns)]
+	tickets = tickets.loc[:, tickets.columns.intersection(columns)]
 
-	# Filter down to relevant rows
+	# Apply proper labels to SubStatusID
+	substatuses = get_substatuses()
+	tickets.loc[:, 'SubStatusID'] = tickets['SubStatusID'].transform(lambda x: substatuses[x])	
 
+	# Apply proper labels to IDs in IssueTypeID
+	issuetypes = get_issuetypes()
+	tickets.loc[:, 'IssueTypeID'] = tickets['IssueTypeID'].transform(lambda x: issuetypes[x])
+
+	# Select rows for morning post
+	tickets = tickets[tickets['IssueTypeID'] != 'Systems Administration']
+
+
+	tickets = tickets[tickets['SubStatusID'] != 'Project - NO ESCALATION']
+	tickets = tickets[tickets['SubStatusID'] != 'On-Boarding/Off-Boarding']
+	tickets = tickets[tickets['SubStatusID'] != 'Waiting on OIT/Facilities']
+	tickets = tickets[tickets['SubStatusID'] != 'Waiting on Shipment']
 	return tickets
 
 
@@ -114,7 +162,8 @@ def main():
 
 	# Process and sort tickets
 	tickies = process_tickets(tickies)
-	print(tickies.head())
+	print(tickies)
+	print(tickies.shape)
 	tickie_dict = sort_tickets(tickies, categories)
 
 	# Generate the post
