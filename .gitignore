@@ -1,5 +1,7 @@
 # Project Specific
 api.key
+IssuetrakAPI/
+IssuetrakAPI
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
