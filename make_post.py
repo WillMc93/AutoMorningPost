@@ -189,7 +189,6 @@ def render_post() -> str:
 def main():
 	# Get necessary info
 	tickies = get_tickets()
-	categories = get_categories()
 	schedule = get_schedule()
 
 	# Process and sort tickets
