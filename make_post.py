@@ -11,7 +11,7 @@ from IssuetrakAPI import IssuetrakAPI
 CATEGORIES_PATH = './categories.idk'
 SEVENTEEN_SCHEDULE = './017_schedule.csv'
 
-# FUCK YOU APPLE; I DIDN'T NEED THIS SHIT IN LINUX
+# FUCK YOU APPLE; I DIDN'T NEED THIS SHIT IN LINUX TO SEE WHAT I WAS DOING
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', None)
 
@@ -138,7 +138,7 @@ def process_tickets(tickets:pd.DataFrame) -> pd.DataFrame:
 	issuetypes = get_issuetypes()
 	tickets.loc[:, 'IssueTypeID'] = tickets['IssueTypeID'].transform(lambda x: issuetypes[x])
 
-	# Make AssignedTo Uniform
+	# Make AssignedTo uniform and make it work with Teams mentions (make it an email)
 	make_email = lambda user: ''.join([user.lower(), '@auburn.edu'])
 	tickets.loc[:, 'AssignedTo'] = tickets['AssignedTo'].transform(lambda x: make_email(x) if x is not None else 'None')
 
@@ -153,7 +153,29 @@ def process_tickets(tickets:pd.DataFrame) -> pd.DataFrame:
 
 
 # Sort the tickets into the proper categories.
-def sort_tickets(tickets:pd.DataFrame, categories:dict) -> [{}]:
+def sort_tickets(tickets:pd.DataFrame) -> dict[list[dict]]:
+	# Get events
+	events = tickets[tickets['IssueTypeID'] == 'Event']
+
+	# Get scheduled that aren't events
+	scheduled = tickets[tickets['SubStatusID'] == 'Scheduled']
+	scheduled = scheduled[scheduled['IssueTypeID'] != 'Event']
+	
+	# Get miscellaneous tickets (those that aren't in the above two and weren't filtered in process_tickets()
+	misc = tickets[tickets['SubStatusID'] != 'Scheduled']
+	misc = misc[misc['IssueTypeID'] != 'Event']
+
+	# Put into dictionary
+	tickets = {}
+	tickets['events'] = events.to_dict('records')
+	tickets['scheduled'] = events.to_dict('records')
+	tickets['misc'] = events.to_dict('records')
+
+	return tickets
+
+
+# Turns the list of dictionaries in sort_tickets into list of strings that'll be put into the morning post.
+def format_tickets(tickets: dict[list[dict]]) -> dict[list[str]]:
 
 	pass
 
@@ -172,9 +194,9 @@ def main():
 
 	# Process and sort tickets
 	tickies = process_tickets(tickies)
+	tickie_dict = sort_tickets(tickies)
 	print(tickies)
-	print(tickies.shape)
-	tickie_dict = sort_tickets(tickies, categories)
+
 
 	# Generate the post
 	post = render_post()
