@@ -72,13 +72,7 @@ def get_tickets() -> pd.DataFrame:
 	tickets = pd.DataFrame(tickets)
 	return tickets
 	
-
-# Get the categories w/ custom strings.
-def get_categories(path:str=CATEGORIES_PATH) -> dict:
-
-	pass
-
-
+z
 # Get the 017 schedule from file
 def get_schedule(path:str=SEVENTEEN_SCHEDULE) -> dict:
 
