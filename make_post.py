@@ -1,7 +1,9 @@
 import json
 from datetime import datetime
 
+import jinja2 
 import pandas as pd
+
 
 from IssuetrakAPI import IssuetrakAPI
 
@@ -121,7 +123,28 @@ def get_issuetypes() -> dict:
 	return issuetypes
 
 
-# Trim to neccessary columns, apply labels, and then get tickets for morning post
+# Get a dictionary of assignes so we can read and @ them
+def get_users() -> dict:
+	# Initialize API connection
+	api = IssuetrakAPI.IssuetrakAPI()
+
+	# GET data to dictionary
+	response = api.performGet('/users')
+	data = response.read()
+	data = json.loads(data)
+
+	# Get IDs and their labels into a dictionary
+	total = data['TotalCount']
+	users = data['Collection']
+	users = {id_['UserID']: ' '.join([id_['FirstName'], id_['LastName']]) for id_ in users}
+	users[None] = 'None'
+	users[''] = 'None'
+	assert(total+2 == len(users))
+
+	return users
+
+
+# Trim to neccessary columns, apply human-readable labels, and then filter tickets for the morning post
 def process_tickets(tickets:pd.DataFrame) -> pd.DataFrame:
 	# Filter down to needed columns
 	columns = ['IssueNumber', 'SubmittedDate', 'Subject', 'IssueTypeID',
@@ -136,6 +159,10 @@ def process_tickets(tickets:pd.DataFrame) -> pd.DataFrame:
 	issuetypes = get_issuetypes()
 	tickets.loc[:, 'IssueTypeID'] = tickets['IssueTypeID'].transform(lambda x: issuetypes[x])
 
+	# Apply proper lables to User IDs in AssignedTo
+	users = get_users()
+	tickets.loc[:, 'AssignedTo'] = tickets['AssignedTo'].transform(lambda x: users[x])
+
 	# Select rows for morning post
 	# Don't ping Adam. He's got this.
 	tickets = tickets[tickets['IssueTypeID'] != 'Systems Administration'] 
@@ -147,7 +174,7 @@ def process_tickets(tickets:pd.DataFrame) -> pd.DataFrame:
 
 
 # Sort the tickets into the proper categories.
-def sort_tickets(tickets:dict, categories:dict) -> dict:
+def sort_tickets(tickets:pd.DataFrame, categories:dict) -> [{}]:
 
 	pass
 
