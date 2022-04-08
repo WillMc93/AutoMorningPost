@@ -8,7 +8,7 @@ import pandas as pd
 from IssuetrakAPI import IssuetrakAPI
 
 # Initialize Globals
-CATEGORIES_PATH = './categories.idk'
+POST_TEMPLATE = './post_template.j2'
 SEVENTEEN_SCHEDULE = './017_schedule.csv'
 
 # FUCK YOU APPLE; I DIDN'T NEED THIS SHIT IN LINUX TO SEE WHAT I WAS DOING
@@ -185,7 +185,7 @@ def render_post() -> str:
 
 	pass
 
-
+# 'Script' that this script achieves
 def main():
 	# Get necessary info
 	tickies = get_tickets()
