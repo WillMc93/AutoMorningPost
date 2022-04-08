@@ -9,6 +9,10 @@ from IssuetrakAPI import IssuetrakAPI
 CATEGORIES_PATH = './categories.idk'
 SEVENTEEN_SCHEDULE = './017_schedule.csv'
 
+# FUCK YOU APPLE; I DIDN'T NEED THIS SHIT IN LINUX
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', None)
+
 
 # Gather all tickets for the post.
 # TODO: Try and make the request query readable
@@ -78,6 +82,7 @@ def get_schedule(path:str=SEVENTEEN_SCHEDULE) -> dict:
 
 	pass
 
+
 # Get a dictionary of substatus ids
 def get_substatuses() -> dict:
 	# Initialize API connection
@@ -132,13 +137,12 @@ def process_tickets(tickets:pd.DataFrame) -> pd.DataFrame:
 	tickets.loc[:, 'IssueTypeID'] = tickets['IssueTypeID'].transform(lambda x: issuetypes[x])
 
 	# Select rows for morning post
-	tickets = tickets[tickets['IssueTypeID'] != 'Systems Administration']
+	# Don't ping Adam. He's got this.
+	tickets = tickets[tickets['IssueTypeID'] != 'Systems Administration'] 
 
-
-	tickets = tickets[tickets['SubStatusID'] != 'Project - NO ESCALATION']
-	tickets = tickets[tickets['SubStatusID'] != 'On-Boarding/Off-Boarding']
-	tickets = tickets[tickets['SubStatusID'] != 'Waiting on OIT/Facilities']
-	tickets = tickets[tickets['SubStatusID'] != 'Waiting on Shipment']
+	# Filter out paused tickets
+	tickets = tickets[tickets['SubStatusID'].isin(['Unassigned', 'In Progress', 'Scheduled'])]
+	
 	return tickets
 
 
