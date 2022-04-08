@@ -123,27 +123,6 @@ def get_issuetypes() -> dict:
 	return issuetypes
 
 
-# Get a dictionary of assignes so we can read and @ them
-def get_users() -> dict:
-	# Initialize API connection
-	api = IssuetrakAPI.IssuetrakAPI()
-
-	# GET data to dictionary
-	response = api.performGet('/users')
-	data = response.read()
-	data = json.loads(data)
-
-	# Get IDs and their labels into a dictionary
-	total = data['TotalCount']
-	users = data['Collection']
-	users = {id_['UserID']: ' '.join([id_['FirstName'], id_['LastName']]) for id_ in users}
-	users[None] = 'None'
-	users[''] = 'None'
-	assert(total+2 == len(users))
-
-	return users
-
-
 # Trim to neccessary columns, apply human-readable labels, and then filter tickets for the morning post
 def process_tickets(tickets:pd.DataFrame) -> pd.DataFrame:
 	# Filter down to needed columns
@@ -159,9 +138,9 @@ def process_tickets(tickets:pd.DataFrame) -> pd.DataFrame:
 	issuetypes = get_issuetypes()
 	tickets.loc[:, 'IssueTypeID'] = tickets['IssueTypeID'].transform(lambda x: issuetypes[x])
 
-	# Apply proper lables to User IDs in AssignedTo
-	users = get_users()
-	tickets.loc[:, 'AssignedTo'] = tickets['AssignedTo'].transform(lambda x: users[x])
+	# Make AssignedTo Uniform
+	make_email = lambda user: ''.join([user.lower(), '@auburn.edu'])
+	tickets.loc[:, 'AssignedTo'] = tickets['AssignedTo'].transform(lambda x: make_email(x) if x is not None else 'None')
 
 	# Select rows for morning post
 	# Don't ping Adam. He's got this.
