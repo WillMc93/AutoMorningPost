@@ -38,6 +38,7 @@ def get_tickets() -> pd.DataFrame:
 	# Initialize API connection
 	api = IssuetrakAPI.IssuetrakAPI()
 
+	# Loop through and gather all open tickets
 	tickets = []
 	gathered_all = False
 	total = 0
