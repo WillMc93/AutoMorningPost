@@ -1,17 +1,27 @@
+
+# Standard
 import json
+import re
 from datetime import datetime
 
+# PyPI
 import jinja2 
 import pandas as pd
 
-
+# Local
 from IssuetrakAPI import IssuetrakAPI
 
 # Initialize Globals
+# Paths:
 POST_TEMPLATE = './post_template.j2'
 SEVENTEEN_SCHEDULE = './017_schedule.csv'
 
-# FUCK YOU APPLE; I DIDN'T NEED THIS SHIT IN LINUX TO SEE WHAT I WAS DOING
+# Regular Expressions:
+RE_DAYS_OF_WEEK = r'(Sun|Mon|(T(ues|hurs))|Fri)(day|\.)?$|Wed(\.|nesday)?$|Sat(\.|urday)?$|T((ue?)|(hu?r?))\.?'
+RE_MONTH_DAY_NUMERIC = r'(0[1-9]|1[012])[-/.](0[1-9]|[12][0-9]|3[01])[- /.]'
+RE_MONTH_DAY_ALPHA = r''
+
+# Pandas settings so Will could see what he was doing on a Mac
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', None)
 
@@ -72,7 +82,7 @@ def get_tickets() -> pd.DataFrame:
 	tickets = pd.DataFrame(tickets)
 	return tickets
 	
-z
+
 # Get the 017 schedule from file
 def get_schedule(path:str=SEVENTEEN_SCHEDULE) -> dict:
 
@@ -117,6 +127,11 @@ def get_issuetypes() -> dict:
 	return issuetypes
 
 
+# Apply regular expressions to find dates in tickets
+def extract_dates(tickets: pd.DataFrame) -> pd.DataFrame:
+
+
+
 # Trim to neccessary columns, apply human-readable labels, and then filter tickets for the morning post
 def process_tickets(tickets:pd.DataFrame) -> pd.DataFrame:
 	# Filter down to needed columns
@@ -138,16 +153,19 @@ def process_tickets(tickets:pd.DataFrame) -> pd.DataFrame:
 
 	# Select rows for morning post
 	# Don't ping Adam. He's got this.
-	tickets = tickets[tickets['IssueTypeID'] != 'Systems Administration'] 
+	tickets = tickets[tickets['IssueTypeID'] != 'Systems Administration']
 
 	# Filter out paused tickets
 	tickets = tickets[tickets['SubStatusID'].isin(['Unassigned', 'In Progress', 'Scheduled'])]
 	
+	# Extract dates
+	tickets = extract_dates(tickets)
+
 	return tickets
 
 
 # Sort the tickets into the proper categories.
-def sort_tickets(tickets:pd.DataFrame) -> dict[list[dict]]:
+def sort_tickets(tickets:pd.DataFrame) -> dict[pd.DataFrame]:
 	# Get events
 	events = tickets[tickets['IssueTypeID'] == 'Event']
 
@@ -155,15 +173,16 @@ def sort_tickets(tickets:pd.DataFrame) -> dict[list[dict]]:
 	scheduled = tickets[tickets['SubStatusID'] == 'Scheduled']
 	scheduled = scheduled[scheduled['IssueTypeID'] != 'Event']
 	
-	# Get miscellaneous tickets (those that aren't in the above two and weren't filtered in process_tickets()
+	# Get miscellaneous tickets
+	# (those that aren't in the above two and weren't filtered in process_tickets()
 	misc = tickets[tickets['SubStatusID'] != 'Scheduled']
 	misc = misc[misc['IssueTypeID'] != 'Event']
 
 	# Put into dictionary
 	tickets = {}
-	tickets['events'] = events.to_dict('records')
-	tickets['scheduled'] = events.to_dict('records')
-	tickets['misc'] = events.to_dict('records')
+	tickets['events'] = events
+	tickets['scheduled'] = scheduled
+	tickets['misc'] = misc
 
 	return tickets
 
