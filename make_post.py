@@ -129,7 +129,7 @@ def get_issuetypes() -> dict:
 
 # Apply regular expressions to find dates in tickets
 def extract_dates(tickets: pd.DataFrame) -> pd.DataFrame:
-
+    return tickets
 
 
 # Trim to neccessary columns, apply human-readable labels, and then filter tickets for the morning post
